@@ -305,6 +305,23 @@ svymean(x = ~ as_factor(nnivins),
     ## as_factor(nnivins)Superior                     0.2637734 0.0059
 
 ``` r
+# Average income by gender
+svyby(~ income, ~ as_factor(p02), 
+      design = enemdu2023_svydesign, 
+      svymean, na.rm = TRUE)
+```
+
+    ##         as_factor(p02)   income       se
+    ##  Hombre         Hombre 495.6362 5.071176
+    ##  Mujer           Mujer 419.7013 5.069835
+
+``` r
+(419.7013 - 495.6362) / 495.6362
+```
+
+    ## [1] -0.1532069
+
+``` r
 # Average income by gender (STEM only)
 svyby(~ income, ~ as_factor(p02), 
       design = subset(enemdu2023_svydesign, stem == 1), 
@@ -314,6 +331,29 @@ svyby(~ income, ~ as_factor(p02),
     ##         as_factor(p02)    income       se
     ##  Hombre         Hombre 1206.6674 29.14844
     ##  Mujer           Mujer  970.5498 45.50951
+
+``` r
+(970.5498 - 1206.6674) / 1206.6674
+```
+
+    ## [1] -0.1956775
+
+``` r
+# Average income by gender (non-STEM only)
+svyby(~ income, ~ as_factor(p02), 
+      design = subset(enemdu2023_svydesign, stem == 0), 
+      svymean, na.rm = TRUE)
+```
+
+    ##         as_factor(p02)   income       se
+    ##  Hombre         Hombre 479.6023 4.801907
+    ##  Mujer           Mujer 415.4917 4.995044
+
+``` r
+(415.4917 - 479.6023) / 479.6023
+```
+
+    ## [1] -0.1336745
 
 ``` r
 # Median income of women (STEM only)

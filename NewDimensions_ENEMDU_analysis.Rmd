@@ -156,10 +156,26 @@ svymean(x = ~ as_factor(nnivins),
         design = subset(enemdu2023_svydesign, pea == 1 & p02 == 2 & p03 >= 18), 
         na.rm = TRUE)
 
+# Average income by gender
+svyby(~ income, ~ as_factor(p02), 
+      design = enemdu2023_svydesign, 
+      svymean, na.rm = TRUE)
+
+(419.7013 - 495.6362) / 495.6362
+
 # Average income by gender (STEM only)
 svyby(~ income, ~ as_factor(p02), 
       design = subset(enemdu2023_svydesign, stem == 1), 
       svymean, na.rm = TRUE)
+
+(970.5498 - 1206.6674) / 1206.6674
+
+# Average income by gender (non-STEM only)
+svyby(~ income, ~ as_factor(p02), 
+      design = subset(enemdu2023_svydesign, stem == 0), 
+      svymean, na.rm = TRUE)
+
+(415.4917 - 479.6023) / 479.6023
 
 # Median income of women (STEM only)
 women_income <- enemdu2023 %>% filter(p02 == 2, stem == 1) %>% select(income) %>% pull()
