@@ -1,0 +1,165 @@
+---
+title: "Famale Labor Participation in STEM Areas"
+author: "Alonso Quijano"
+date: "2024-05-27"
+output: rmarkdown::github_document
+---
+
+## Data preprocessing
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+  
+
+```{r packages and data, results = 'hide', message=FALSE, warning=FALSE}
+# -------------------------------------------------- #
+# (1) Loading the data
+# -------------------------------------------------- #
+
+# Load libraries
+library(haven)
+library(labelled)
+library(tidyverse)
+library(survey)
+
+# Load data
+# Set temporary directory
+td <- tempdir()
+
+# Unzip the data file
+unzip(zipfile = "ENEMDU_ANUAL_2023.zip", exdir = td)
+
+# Read the SPSS file
+enemdu2023 <- read_spss(file.path(td, "BDDenemdu_personas_2023_anual.sav"))
+enemdu2023_labels <- var_label(enemdu2023)
+
+```
+
+```{r preprocessing}
+# -------------------------------------------------- #
+# (2) Preprocessing and Data Manipulation
+# -------------------------------------------------- #
+
+# Define economically active population (PEA)
+enemdu2023 <- enemdu2023 %>% mutate(pea = ifelse(between(condact, 1, 8), 1, 0))
+
+# Define adequate employment (people earning the minimum salary or higher)
+enemdu2023 <- enemdu2023 %>% mutate(emp_adeq = ifelse(condact == 1, 1, 0))
+
+# Define IESS contribution (1 if contributes to IESS, 0 otherwise)
+enemdu2023 <- enemdu2023 %>% 
+  mutate(iess = ifelse(between(p05a, 1, 4) | between(p05b, 1, 4), 1, 0))
+
+# Define STEM field (1 if in STEM, 0 otherwise)
+# We exclude people in health sciences to avoid overrepresentation of women in nursing and midwifery
+enemdu2023$stem <- ifelse(substr(enemdu2023$p41, 1,2) %in% c(21, 25), 1, 0)
+
+# Remove non responses from income variable
+enemdu2023 <-  enemdu2023 %>% mutate(
+  income = case_when(ingrl == -1 ~ 0, ingrl == 999999 ~ NA, TRUE ~ ingrl))
+```
+
+## Analysis w/o survey design
+
+```{r analysis w/o survey weights}
+# -------------------------------------------------- #
+# (3) Employment Classification
+# -------------------------------------------------- #
+
+# Men
+enemdu2023 %>% filter(p02 == 1, pea == 1) %>% 
+  group_by(condact) %>% summarize(n = n()) %>% 
+  mutate(prob = prop.table(n))
+
+# Women
+enemdu2023 %>% filter(p02 == 2, pea == 1) %>% 
+  count(condact) %>% mutate(prob = prop.table(n))
+
+# Indigenous Women
+enemdu2023 %>% filter(p02 == 2, pea == 1, p15 == 1) %>% 
+  count(condact) %>% mutate(prob = prop.table(n))
+
+# -------------------------------------------------- #
+# (4) Occupation Type
+# -------------------------------------------------- #
+
+# Men
+enemdu2023 %>% filter(p02 == 1, empleo == 1) %>% 
+  count(grupo1) %>% mutate(prob = prop.table(n))
+
+# Women
+enemdu2023 %>% filter(p02 == 2, empleo == 1) %>%
+  count(grupo1) %>% mutate(prob = prop.table(n))
+
+# Indigenous women
+enemdu2023 %>% filter(p02 == 2, empleo == 1, p15 == 1) %>%
+  count(grupo1) %>% mutate(prob = prop.table(n))
+
+# -------------------------------------------------- #
+# (5) Income
+# -------------------------------------------------- #
+
+# Average income by gender (STEM only)
+enemdu2023 %>% filter(stem == 1) %>% group_by(as_factor(p02)) %>% 
+  summarize(avg_income = mean(income, na.rm = TRUE))
+
+# Median income by gender (STEM only)
+enemdu2023 %>% filter(stem == 1) %>% group_by(as_factor(p02)) %>% 
+  summarize(avg_income = median(income, na.rm = TRUE))
+
+```
+
+## Analysis w/ survey design
+
+```{r analysis w/ survey weights}
+# -------------------------------------------------- #
+# (6) Survey Design
+# -------------------------------------------------- #
+
+# Create survey design object
+enemdu2023_svydesign <- svydesign(data = enemdu2023,
+                                  ids = ~ upm, # Primary Sampling Unit
+                                  strata = ~ estrato, # Strata
+                                  weights = ~ fexp, # Weights
+                                  nest = TRUE) # Multistage Sampling
+
+# -------------------------------------------------- #
+# (7) Analysis with Survey Design
+# -------------------------------------------------- #
+
+# Employment classification of economically active women
+svymean(x = ~ as_factor(condact),
+        design = subset(enemdu2023_svydesign, pea == 1 & p02 == 2), 
+        na.rm = TRUE)
+
+# Percentage of women who contribute to IESS
+svymean(x = ~ iess,
+        design = subset(enemdu2023_svydesign, pea == 1 & p02 == 2), 
+        na.rm = TRUE)
+
+# Gender classification of individuals in STEM fields
+svymean(x = ~ as_factor(p02),
+        design = subset(enemdu2023_svydesign, stem == 1), 
+        na.rm = TRUE)
+
+# Educational attainment of adult women
+svymean(x = ~ as_factor(nnivins),
+        design = subset(enemdu2023_svydesign, pea == 1 & p02 == 2 & p03 >= 18), 
+        na.rm = TRUE)
+
+# Average income by gender (STEM only)
+svyby(~ income, ~ as_factor(p02), 
+      design = subset(enemdu2023_svydesign, stem == 1), 
+      svymean, na.rm = TRUE)
+
+# Median income of women (STEM only)
+women_income <- enemdu2023 %>% filter(p02 == 2, stem == 1) %>% select(income) %>% pull()
+women_weights <- enemdu2023 %>% filter(p02 == 2, stem == 1) %>% select(fexp) %>% pull()
+median(rep(women_income, times=women_weights), na.rm = TRUE)
+
+# Median income of women (STEM only)
+men_income <- enemdu2023 %>% filter(p02 == 1, stem == 1) %>% select(income) %>% pull()
+men_weights <- enemdu2023 %>% filter(p02 == 1, stem == 1) %>% select(fexp) %>% pull()
+median(rep(men_income, times=men_weights), na.rm = TRUE)
+```
