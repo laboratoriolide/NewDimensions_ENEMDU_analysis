@@ -6,4 +6,4 @@ New Dimensions is a comprehensive business intelligence program for women from d
 The inaugural cohort included 55 women and received $25,000 in funding from the US Embassy in Ecuador in 2023. We are now seeking support for the upcoming second cohort scheduled to launch in 2025. Our goal is to secure funding for the next four cohorts (i.e. 2025 through 2028).
 
 Elaborated by: Alonso Quijano [X](https://x.com/aquijanoruiz), [Github](https://github.com/aquijanoruiz)  
-Source: Ecuador 2023 National Labor Survey (https://www.ecuadorencifras.gob.ec/enemdu-anual/)
+Source: Ecuador 2023 National Labor Survey [ENEMDU](https://www.ecuadorencifras.gob.ec/enemdu-anual/)
